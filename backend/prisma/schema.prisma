@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Teacher {
+  id           Int            @id @default(autoincrement())
+  userId       Int            @unique
+  ScheduleSlot ScheduleSlot[]
+  User         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loads        TeacherLoad[]
+}
+
+model Subject {
+  id           Int            @id @default(autoincrement())
+  name         String
+  isGroupSplit Boolean        @default(false)
+  ScheduleSlot ScheduleSlot[]
+  loads        TeacherLoad[]
+}
+
+model Classroom {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique
+  capacity     Int            @default(30)
+  ScheduleSlot ScheduleSlot[]
+}
+
+model ClassGroup {
+  id               Int            @id @default(autoincrement())
+  name             String         @unique
+  maxLessonsPerDay Int?
+  ScheduleSlot     ScheduleSlot[]
+  loads            TeacherLoad[]
+}
+
+model ScheduleSlot {
+  id         Int        @id @default(autoincrement())
+  period     Int
+  teacherId  Int
+  classId    Int
+  subjectId  Int
+  day        Int
+  room       String
+  weekNumber Int
+  ClassGroup ClassGroup @relation(fields: [classId], references: [id])
+  Classroom  Classroom  @relation(fields: [room], references: [name])
+  Subject    Subject    @relation(fields: [subjectId], references: [id])
+  Teacher    Teacher    @relation(fields: [teacherId], references: [id])
+
+  @@unique([weekNumber, day, period, teacherId])
+  @@index([teacherId])
+  @@index([classId])
+  @@index([subjectId])
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      Role     @default(TEACHER)
+  fullName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Teacher   Teacher?
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+}
+
+model TeacherLoad {
+  id           Int        @id @default(autoincrement())
+  teacherId    Int
+  subjectId    Int
+  classId      Int
+  hoursPerWeek Int
+  createdAt    DateTime   @default(now())
+
+  teacher      Teacher    @relation(fields: [teacherId], references: [id])
+  subject      Subject    @relation(fields: [subjectId], references: [id])
+  class        ClassGroup @relation(fields: [classId], references: [id])
+
+  @@index([teacherId])
+  @@index([classId])
+  @@index([subjectId])
+  @@map("teacher_load")
+}
+
+model Setting {
+  id               Int      @id @default(autoincrement())
+  schoolName       String
+  academicYear     String
+  maxLessonsPerDay Int
+  startTime        String
+  weekStart        String
+  breaks           Int[]
+  updatedAt        DateTime @updatedAt
+}
